@@ -1,0 +1,58 @@
+---
+title: "Cities in Germany"
+author: "Christian Thyssen"
+date: "2021-10-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load libraries:
+
+```{r libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(leaflet)
+```
+
+Download data:
+
+```{r data, warning=FALSE, message=FALSE}
+if(!file.exists("de.csv")) {
+    download.file("https://simplemaps.com/static/data/country-cities/de/de.csv",
+                  "de.csv")
+}
+cities <- read_csv("de.csv") %>%
+    filter(!is.na(lng) & !is.na(lat) & !is.na(population) & !is.na(city)) %>%
+    mutate(capital = ifelse(is.na(capital), "none", capital)) %>%
+    mutate(capital = factor(capital,
+                            levels = c("primary", "admin", "minor", "none")))
+```
+
+Visualize data:
+
+```{r visualize}
+pal <- colorFactor(palette = topo.colors(4),
+                   domain = c("primary", "admin", "minor", "none"))
+m <- cities %>%
+    leaflet() %>%
+    addTiles() %>%
+    addCircles(lng = ~lng,
+               lat = ~lat,
+               radius = ~sqrt(population) * 30,
+               group = ~capital,
+               stroke = FALSE,
+               color = ~pal(capital),
+               fillOpacity = .3,
+               popup = ~city) %>%
+    addLegend(position = "bottomright",
+              pal = pal,
+              values = ~capital,
+              opacity = 1,
+              title = "Capital") %>%
+    addLayersControl(overlayGroups = ~levels(capital),
+                     position = "topright",
+                     options = layersControlOptions(collapsed = FALSE))
+m
+```
